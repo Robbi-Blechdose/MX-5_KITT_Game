@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=MX-5 KITT
+Comment=Game
+Exec=main-funkey.elf
+Icon=icon
+Terminal=false
+Categories=applications;
