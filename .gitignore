@@ -1,2 +1,7 @@
-main
+#Ignore vscode dir
 .vscode/
+#Ignore object files
+*.o
+#Ignore executables
+main.elf
+main-funkey.elf
