@@ -1,5 +1,8 @@
+#include <math.h>
+
 #include "car.h"
 #include "resources.h"
+#include "utils.h"
 
 int8_t accelerationTable[6] = {
     100, 120, 80, 60, 30, 20
@@ -26,9 +29,9 @@ void initCar(Car* car)
 	car->wheelMesh = spMeshLoadObj(WHEEL_MESH, car->wheelTexture, 65535);
     //Set initial position + rotation
     car->position.x = 0;
-    car->position.y = spFloatToFixed(1.0f);
-    car->position.z = spFloatToFixed(-29.0f);
-    car->rotation.y = spDiv(-SP_PI, spIntToFixed(2));
+    car->position.y = 1.0f;
+    car->position.z = -29.0f;
+    car->rotation.y = spFixedToFloat(spDiv(-SP_PI, spIntToFixed(2)));
     //Set to gear 1
     car->gear = 1;
     //Set popups to up
@@ -48,10 +51,12 @@ void deleteCar(Car* car)
 void drawCar(Car* car)
 {
     //Set car position + rotation
-	spTranslate(car->position.x, car->position.y, car->position.z);
-	spRotateX(car->rotation.x);
-	spRotateY(car->rotation.y);
-	spRotateZ(car->rotation.z);
+	spTranslate(spFloatToFixed(car->position.x),
+                spFloatToFixed(car->position.y),
+                spFloatToFixed(car->position.z));
+	spRotateX(spFloatToFixed(car->rotation.x));
+	spRotateY(spFloatToFixed(car->rotation.y));
+	spRotateZ(spFloatToFixed(car->rotation.z));
     //Draw car
 	spMesh3D(car->bodyMesh, 2);
     //Save model view
@@ -86,16 +91,66 @@ void drawCar(Car* car)
     spMesh3D(car->wheelMesh, 2);
 }
 
-void calcCar(Car* car, Uint32 steps)
+#define DISTANCE 2.0f
+
+/**
+ * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
+ * Then run Möller-Trumbore for each wheel
+ **/
+void calcRaycast(Vector3f* position, Map* map)
 {
+    spModelPointer mapMesh = map->mapMesh;
+    
+    int i, j;
+    for(i = 0; i < mapMesh->texTriangleCount; i++)
+	{
+        for(j = 0; j < 3; j++)
+        {
+            if(spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].x) > (position->x - DISTANCE) &&
+               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].x) < (position->x + DISTANCE) &&
+               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) > (position->z - DISTANCE) &&
+               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) < (position->z + DISTANCE))
+            {
+                //TODO: Somehow mark triangle
+                Vector3f dir, vert0, vert1, vert2;
+                dir.x = 0;
+                dir.y = -1.0f;
+                dir.z = 0;
+                fixedToVec3f(&vert0, mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].x,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].y,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].z);
+                fixedToVec3f(&vert1, mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].x,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].y,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].z);
+                fixedToVec3f(&vert2, mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].x,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].y,
+                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].z);
+                float t, u, v;
+                if(intersectTriangle(position, &dir, &vert0, &vert1, &vert2, &t, &u, &v))
+                {
+                    position->y += (1.0f - t);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void calcCar(Car* car, Map* map, Uint32 steps)
+{
+    calcRaycast(&car->position, map);
+
+    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f);
+    /**
     car->speed = spMul(spDiv(spIntToFixed(car->revs), spIntToFixed(speedTable[car->gear])),
                        spDiv(spIntToFixed(steps), spIntToFixed(750)));
+    **/
     car->speedKPH = spFixedToInt(spMul(spDiv(spIntToFixed(car->revs), spIntToFixed(speedTable[car->gear])),
                                        spIntToFixed(40)));
 
     //Calculate x and z position
-    car->position.x += spMul(car->speed, spSin(car->rotation.y));
-    car->position.z += spMul(car->speed, spCos(car->rotation.y));
+    car->position.x += car->speed * sin(car->rotation.y);
+    car->position.z += car->speed * cos(car->rotation.y);
 
     //Handle popups
     if(car->popupState == POPUPS_MDOWN)
@@ -163,8 +218,10 @@ void steer(Car* car, int8_t dir, Uint32 steps)
 {
     if(car->speedKPH != 0)
     {
-        car->rotation.y += spMul(spIntToFixed(dir), spDiv(spIntToFixed(steps), spIntToFixed(1000)));
-        car->rotation.z = lerpFixed(car->rotation.z, spFloatToFixed(dir * 0.07f), spFloatToFixed(steps * 0.01f));
+        car->rotation.y += dir * (steps / 1000.0f);
+        car->rotation.z = lerpf(car->rotation.z, dir * 0.07f, steps * 0.01f);
+        //car->rotation.y += spMul(spIntToFixed(dir), spDiv(spIntToFixed(steps), spIntToFixed(1000)));
+        //car->rotation.z = lerpFixed(car->rotation.z, spFloatToFixed(dir * 0.07f), spFloatToFixed(steps * 0.01f));
     }
     car->steering = dir;
 }

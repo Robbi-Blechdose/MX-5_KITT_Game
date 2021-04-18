@@ -5,6 +5,7 @@
 #include <SDL_image.h>
 
 #include "utils.h"
+#include "map.h"
 
 #define POPUPS_DOWN 0
 #define POPUPS_UP 1
@@ -25,13 +26,13 @@ typedef struct {
     SDL_Surface *wheelTexture;
     spModelPointer wheelMesh;
 
-    Vector position;
-    Vector rotation;
+    Vector3f position;
+    Vector3f rotation;
     
     int16_t revs;
     int8_t gear;
 
-    Sint32 speed;
+    float speed;
     int16_t speedKPH;
 
     int8_t steering;
@@ -44,7 +45,7 @@ void initCar(Car* car);
 void deleteCar(Car* car);
 
 void drawCar(Car* car);
-void calcCar(Car* car, Uint32 steps);
+void calcCar(Car* car, Map* map, Uint32 steps);
 
 void accelerate(Car* car, int8_t dir, Uint32 steps);
 void steer(Car* car, int8_t dir, Uint32 steps);
