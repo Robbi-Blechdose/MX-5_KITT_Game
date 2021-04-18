@@ -16,6 +16,7 @@
 SDL_Surface *screen;
 spFontPointer font;
 
+Map map;
 Car playerCar;
 
 void resize(Uint16 w, Uint16 h)
@@ -37,7 +38,7 @@ void resize(Uint16 w, Uint16 h)
 
 void drawFrame()
 {
-    spClearTarget(spGetRGB(102, 204, 255));
+    spClearTarget(BACKGROUND_COLOR);
 	spSetLight(0);
 	spSetZSet(1);
 	spSetZTest(1);
@@ -45,8 +46,7 @@ void drawFrame()
 
     drawCameraPos();
 
-    drawMap();
-
+    drawMap(&map);
     drawCar(&playerCar);
 
     drawGameUI(&playerCar);
@@ -77,7 +77,7 @@ int calcFrame(Uint32 steps)
         togglePopups(&playerCar);
     }
 
-	calcCar(&playerCar, steps);
+	calcCar(&playerCar, &map, steps);
     calcCameraPos(&playerCar, steps);
 
     updateKeys();
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 
     //Initialize game
     initGameUI();
-    initMap();
+    initMap(&map);
 	initCar(&playerCar);
     initCamera();
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
     //Game cleanup
     deleteCar(&playerCar);
-    deleteMap();
+    deleteMap(&map);
     deleteGameUI();
 
     //SparrowSound cleanup
