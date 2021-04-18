@@ -4,9 +4,18 @@
 #include <sparrow3d.h>
 #include <SDL.h>
 
-void initMap();
-void deleteMap();
+typedef struct {
+    SDL_Surface *mapTexture;
+    spModelPointer mapMesh;
+    SDL_Surface *treeTexture;
+    spModelPointer treeMesh;
+    SDL_Surface *rockTexture;
+    spModelPointer rockMesh;
+} Map;
 
-void drawMap();
+void initMap(Map* map);
+void deleteMap(Map* map);
+
+void drawMap(Map* map);
 
 #endif
