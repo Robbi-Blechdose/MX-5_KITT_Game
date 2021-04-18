@@ -100,7 +100,7 @@ void drawCar(Car* car)
 void calcRaycast(Vector3f* position, Map* map)
 {
     spModelPointer mapMesh = map->mapMesh;
-    
+
     int i, j;
     for(i = 0; i < mapMesh->texTriangleCount; i++)
 	{
@@ -149,8 +149,8 @@ void calcCar(Car* car, Map* map, Uint32 steps)
                                        spIntToFixed(40)));
 
     //Calculate x and z position
-    car->position.x += car->speed * sin(car->rotation.y);
-    car->position.z += car->speed * cos(car->rotation.y);
+    car->position.x += car->speed * sinf(car->rotation.y);
+    car->position.z += car->speed * cosf(car->rotation.y);
 
     //Handle popups
     if(car->popupState == POPUPS_MDOWN)

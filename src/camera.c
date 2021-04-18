@@ -36,14 +36,14 @@ void calcCameraPos(Car *car, Uint32 steps)
     cameraInputRot.y = lerpf(cameraInputRot.y, (car->steering * -0.3f) + rotYOffset, steps * 0.02f);
 
     //Calculate horizontal distance from car
-    float hDistance = distance * cos(cameraInputRot.x);
+    float hDistance = distance * cosf(cameraInputRot.x);
     //Calculate horizontal angle
     float hAngle = car->rotation.y + cameraInputRot.y;
     //Calculate x and z position
-    cameraPos.x = car->position.x - (hDistance * sin(hAngle));
-    cameraPos.z = car->position.z - (hDistance * cos(hAngle));
+    cameraPos.x = car->position.x - (hDistance * sinf(hAngle));
+    cameraPos.z = car->position.z - (hDistance * cosf(hAngle));
     //Calculate y position
-    cameraPos.y = car->position.y + (distance * sin(cameraInputRot.x));
+    cameraPos.y = car->position.y + (distance * sinf(cameraInputRot.x));
 
     //Copy pitch
     cameraRot.x = cameraInputRot.x;
