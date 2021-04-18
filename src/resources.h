@@ -1,6 +1,8 @@
 #ifndef _RESOURCES_H
 #define _RESOURCES_H
 
+#define BACKGROUND_COLOR spGetRGB(102, 204, 255)
+
 //Meshes + textures
 #define MX_5_MESH "res/obj/MX-5.obj"
 #define MX_5_TEXTURE "res/tex/MX-5.png"
