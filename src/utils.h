@@ -20,7 +20,7 @@ void updateKeys();
 //char keyDown(uint8_t code);
 char keyReleased(uint8_t code);
 
-Sint32 lerpf(float a, float b, float f);
+float lerpf(float a, float b, float f);
 Sint32 lerpFixed(Sint32 a, Sint32 b, Sint32 f);
 int8_t lerpInt(int8_t a, int8_t b, int8_t f);
 

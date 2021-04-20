@@ -23,7 +23,7 @@ char keyReleased(uint8_t code)
 }
 
 
-Sint32 lerpf(float a, float b, float f)
+float lerpf(float a, float b, float f)
 {
     return a + f * (b - a);
 }
@@ -50,6 +50,13 @@ void fixedToVec3f(Vector3f* result, Sint32 x, Sint32 y, Sint32 z)
     result->x = spFixedToFloat(x);
     result->y = spFixedToFloat(y);
     result->z = spFixedToFloat(z);
+}
+
+void addVec3f(Vector3f* result, Vector3f* a, Vector3f* b)
+{
+    result->x = a->x + b->x;
+    result->y = a->y + b->y;
+    result->z = a->z + b->z;
 }
 
 void subVec3f(Vector3f* result, Vector3f* a, Vector3f* b)
