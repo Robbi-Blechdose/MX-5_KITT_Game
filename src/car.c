@@ -32,6 +32,12 @@ void initCar(Car* car)
     car->position.y = 1.0f;
     car->position.z = -29.0f;
     car->rotation.y = spFixedToFloat(spDiv(-SP_PI, spIntToFixed(2)));
+    //Set initial wheel height
+    int i;
+    for(i = 0; i < 4; i++)
+    {
+        car->wheelPositions[i].y = 1.0f;
+    }
     //Set to gear 1
     car->gear = 1;
     //Set popups to up
@@ -91,15 +97,48 @@ void drawCar(Car* car)
     spMesh3D(car->wheelMesh, 2);
 }
 
+/**
+ * Calculates the x and z positions of the wheels
+ * The y position is set via raycasts and used to calculate the x and z rotation of the car
+ **/
+void calcWheelPositions(Car* car)
+{
+    //Set base position
+    int i;
+    for(i = 0; i < 4; i++)
+    {
+        car->wheelPositions[i].x = car->position.x;
+        car->wheelPositions[i].z = car->position.z;
+    }
+
+    float sinY = sin(car->rotation.y);
+    float cosY = cos(car->rotation.y);
+    //Front left 0.57 -0.33 0.96
+    car->wheelPositions[0].x += 0.57f * cosY + 0.96f * sinY;
+    car->wheelPositions[0].z += 0.57f * -sinY + 0.96f * cosY;
+    //Front right -0.57 -0.33 0.96
+    car->wheelPositions[1].x += -0.57f * cosY + 0.96f * sinY;
+    car->wheelPositions[1].z += -0.57f * -sinY + 0.96f * cosY;
+    //Rear right -0.57 -0.33 -0.96
+    car->wheelPositions[2].x += -0.57f * cosY + -0.96f * sinY;
+    car->wheelPositions[2].z += -0.57f * -sinY + -0.96f * cosY;
+    //Rear left 0.57 -0.33 -0.96
+    car->wheelPositions[3].x += 0.57f * cosY + -0.96f * sinY;
+    car->wheelPositions[3].z += 0.57f * -sinY + -0.96f * cosY;
+}
+
 #define DISTANCE 2.0f
 
 /**
  * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
  * Then run Möller-Trumbore for each wheel
  **/
-void calcRaycast(Vector3f* position, Map* map)
+void calcRaycast(Car* car, Map* map)
 {
+    Vector3f* position = &car->position;
     spModelPointer mapMesh = map->mapMesh;
+
+    calcWheelPositions(car);
 
     int i, j;
     for(i = 0; i < mapMesh->texTriangleCount; i++)
@@ -111,7 +150,6 @@ void calcRaycast(Vector3f* position, Map* map)
                spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) > (position->z - DISTANCE) &&
                spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) < (position->z + DISTANCE))
             {
-                //TODO: Somehow mark triangle
                 Vector3f dir, vert0, vert1, vert2;
                 dir.x = 0;
                 dir.y = -1.0f;
@@ -126,9 +164,17 @@ void calcRaycast(Vector3f* position, Map* map)
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].y,
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].z);
                 float t, u, v;
-                if(intersectTriangle(position, &dir, &vert0, &vert1, &vert2, &t, &u, &v))
+                if(intersectTriangle(&car->wheelPositions[0], &dir, &vert0, &vert1, &vert2, &t, &u, &v))
                 {
-                    position->y += (1.0f - t);
+                    float diff = (1.0f - t);
+                    //Super simple limit for drop speed
+                    //Would have to be improved with steps variable
+                    if(diff < -0.01f)
+                    {
+                        diff = -0.01f;
+                    }
+                    position->y += diff;
+                    car->wheelPositions[0].y += diff;
                     return;
                 }
             }
@@ -138,7 +184,7 @@ void calcRaycast(Vector3f* position, Map* map)
 
 void calcCar(Car* car, Map* map, Uint32 steps)
 {
-    calcRaycast(&car->position, map);
+    calcRaycast(car, map);
 
     car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f);
     /**

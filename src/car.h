@@ -28,6 +28,8 @@ typedef struct {
 
     Vector3f position;
     Vector3f rotation;
+
+    Vector3f wheelPositions[4];
     
     int16_t revs;
     int8_t gear;
