@@ -60,8 +60,8 @@ void drawCar(Car* car)
 	spTranslate(spFloatToFixed(car->position.x),
                 spFloatToFixed(car->position.y),
                 spFloatToFixed(car->position.z));
-	spRotateX(spFloatToFixed(car->rotation.x));
 	spRotateY(spFloatToFixed(car->rotation.y));
+	spRotateX(spFloatToFixed(car->rotation.x));
 	spRotateZ(spFloatToFixed(car->rotation.z));
     //Draw car
 	spMesh3D(car->bodyMesh, 2);
@@ -127,7 +127,7 @@ void calcWheelPositions(Car* car)
     car->wheelPositions[3].z += 0.57f * -sinY + -0.96f * cosY;
 }
 
-#define DISTANCE 2.0f
+#define DISTANCE 3.0f
 
 /**
  * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
@@ -140,6 +140,8 @@ void calcRaycast(Car* car, Map* map)
 
     calcWheelPositions(car);
 
+    uint8_t done[4] = {0, 0, 0, 0};
+
     int i, j;
     for(i = 0; i < mapMesh->texTriangleCount; i++)
 	{
@@ -151,9 +153,12 @@ void calcRaycast(Car* car, Map* map)
                spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) < (position->z + DISTANCE))
             {
                 Vector3f dir, vert0, vert1, vert2;
+                float t, u, v;
                 dir.x = 0;
                 dir.y = -1.0f;
                 dir.z = 0;
+                //TODO: Precompute this on game start? We got more than enough RAM
+                //      Note: Won't be necessary if we rewrite sparrow3d to use floats...
                 fixedToVec3f(&vert0, mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].x,
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].y,
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].z);
@@ -163,23 +168,43 @@ void calcRaycast(Car* car, Map* map)
                 fixedToVec3f(&vert2, mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].x,
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].y,
                                      mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].z);
-                float t, u, v;
-                if(intersectTriangle(&car->wheelPositions[0], &dir, &vert0, &vert1, &vert2, &t, &u, &v))
+                
+                int k;
+                for(k = 0; k < 4; k++)
                 {
-                    float diff = (1.0f - t);
-                    //Super simple limit for drop speed
-                    //Would have to be improved with steps variable
-                    if(diff < -0.01f)
+                    if(done[k])
                     {
-                        diff = -0.01f;
+                        continue;
                     }
-                    position->y += diff;
-                    car->wheelPositions[0].y += diff;
-                    return;
+                    if(intersectTriangle(&car->wheelPositions[k], &dir, &vert0, &vert1, &vert2, &t, &u, &v))
+                    {
+                        float diff = (1.0f - t);
+                        //Super simple limit for drop speed
+                        //TODO: Should be improved with steps variable
+                        if(diff < -0.01f)
+                        {
+                            //diff = -0.01f;
+                        }
+                        //position->y += diff;
+                        car->wheelPositions[k].y += diff;
+                        done[k] = 1;
+                    }
                 }
             }
         }
     }
+
+    car->position.y = (car->wheelPositions[0].y + car->wheelPositions[1].y +
+                       car->wheelPositions[2].y + car->wheelPositions[3].y) / 4;
+    
+    car->rotation.x = -asinf(((car->wheelPositions[0].y - car->wheelPositions[3].y) +
+                              (car->wheelPositions[1].y - car->wheelPositions[2].y)) / (0.96f * 4));
+    car->rotation.z = asinf(((car->wheelPositions[0].y - car->wheelPositions[1].y) +
+                             (car->wheelPositions[3].y - car->wheelPositions[2].y)) / (0.57 * 4));
+
+    /**
+    printf("%f,%f,%f,%f\n",
+    car->wheelPositions[0].y, car->wheelPositions[1].y, car->wheelPositions[2].y, car->wheelPositions[3].y);**/
 }
 
 void calcCar(Car* car, Map* map, Uint32 steps)
@@ -187,10 +212,6 @@ void calcCar(Car* car, Map* map, Uint32 steps)
     calcRaycast(car, map);
 
     car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f);
-    /**
-    car->speed = spMul(spDiv(spIntToFixed(car->revs), spIntToFixed(speedTable[car->gear])),
-                       spDiv(spIntToFixed(steps), spIntToFixed(750)));
-    **/
     car->speedKPH = spFixedToInt(spMul(spDiv(spIntToFixed(car->revs), spIntToFixed(speedTable[car->gear])),
                                        spIntToFixed(40)));
 
@@ -264,10 +285,17 @@ void steer(Car* car, int8_t dir, Uint32 steps)
 {
     if(car->speedKPH != 0)
     {
-        car->rotation.y += dir * (steps / 1000.0f);
-        car->rotation.z = lerpf(car->rotation.z, dir * 0.07f, steps * 0.01f);
-        //car->rotation.y += spMul(spIntToFixed(dir), spDiv(spIntToFixed(steps), spIntToFixed(1000)));
-        //car->rotation.z = lerpFixed(car->rotation.z, spFloatToFixed(dir * 0.07f), spFloatToFixed(steps * 0.01f));
+        //Forward gear
+        if(car->gear > 0)
+        {
+            car->rotation.y += dir * (steps / 1000.0f);
+        }
+        //Reverse
+        else
+        {
+            car->rotation.y -= dir * (steps / 1000.0f);
+        }
+        //car->rotation.z = lerpf(car->rotation.z, dir * 0.07f, steps * 0.01f);
     }
     car->steering = dir;
 }
