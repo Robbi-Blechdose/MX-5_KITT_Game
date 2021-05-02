@@ -42,6 +42,12 @@ void initCar(Car* car)
     car->gear = 1;
     //Set popups to up
     car->popupState = POPUPS_UP;
+
+    //Load skid texture and mesh
+    car->skidTexture = spLoadSurface("res/tex/Skid.png");
+	car->skidMesh = spMeshLoadObj("res/obj/Skid.obj", car->skidTexture, 65535);
+    car->skidIndex = 0;
+    car->skidTimer = 0;
 }
 
 void deleteCar(Car* car)
@@ -56,6 +62,18 @@ void deleteCar(Car* car)
 
 void drawCar(Car* car)
 {
+    spSetAlphaTest(1);
+    int i;
+    for(i = 0; i < NUM_SKIDS; i++)
+    {
+        spPushModelView();
+        spTranslate(spFloatToFixed(car->skidPositions[i].x), spFloatToFixed(car->skidPositions[i].y - 0.9f),
+        spFloatToFixed(car->skidPositions[i].z));
+        spMesh3D(car->skidMesh, 2);
+        spPopModelView();
+    }
+    spSetAlphaTest(0);
+
     //Set car position + rotation
 	spTranslate(spFloatToFixed(car->position.x),
                 spFloatToFixed(car->position.y),
@@ -183,15 +201,30 @@ void calcRaycast(Car* car, Map* map)
                         //TODO: Should be improved with steps variable
                         if(diff < -0.01f)
                         {
-                            //diff = -0.01f;
+                            diff = -0.01f;
                         }
-                        //position->y += diff;
                         car->wheelPositions[k].y += diff;
                         done[k] = 1;
                     }
                 }
             }
         }
+    }
+
+    //Apply turbo boost
+    //TODO: Apply forward direction
+    if(car->turboBoostTimer)
+    {
+        car->turboBoostTimer *= 0.96f;
+        if(car->turboBoostTimer < 0)
+        {
+            car->turboBoostTimer = 0;
+        }
+
+        car->wheelPositions[0].y += (car->turboBoostTimer / 10000.0f);
+        car->wheelPositions[1].y += (car->turboBoostTimer / 10000.0f);
+        car->wheelPositions[2].y += (car->turboBoostTimer / 10000.0f);
+        car->wheelPositions[3].y += (car->turboBoostTimer / 10000.0f);
     }
 
     car->position.y = (car->wheelPositions[0].y + car->wheelPositions[1].y +
@@ -201,7 +234,7 @@ void calcRaycast(Car* car, Map* map)
                               (car->wheelPositions[1].y - car->wheelPositions[2].y)) / (0.96f * 4));
     car->rotation.z = asinf(((car->wheelPositions[0].y - car->wheelPositions[1].y) +
                              (car->wheelPositions[3].y - car->wheelPositions[2].y)) / (0.57 * 4));
-
+    
     /**
     printf("%f,%f,%f,%f\n",
     car->wheelPositions[0].y, car->wheelPositions[1].y, car->wheelPositions[2].y, car->wheelPositions[3].y);**/
@@ -211,9 +244,18 @@ void calcCar(Car* car, Map* map, Uint32 steps)
 {
     calcRaycast(car, map);
 
-    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f);
-    car->speedKPH = spFixedToInt(spMul(spDiv(spIntToFixed(car->revs), spIntToFixed(speedTable[car->gear])),
-                                       spIntToFixed(40)));
+    //Reduce speed if we're going up too tall a slope
+    if(car->rotation.x < -0.65f && car->revs > 0 && car->speed > 0)
+    {
+        car->revs -= 100;
+        if(car->revs < 0)
+        {
+            car->revs = 0;
+        }
+    }
+
+    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f) + (car->turboBoostTimer / 9000.0f);
+    car->speedKPH = (((float) car->revs) / speedTable[car->gear]) * 40;
 
     //Calculate x and z position
     car->position.x += car->speed * sinf(car->rotation.y);
@@ -243,6 +285,26 @@ void calcCar(Car* car, Map* map, Uint32 steps)
             car->popupState = POPUPS_UP;
             car->popupPos = POPUP_POS_UP;
         }
+    }
+
+    if(car->gear == 1)
+    {
+        car->skidTimer += steps;
+        if(car->skidTimer > 100)
+        {
+            car->skidTimer = 0;
+            car->skidPositions[car->skidIndex++] = car->wheelPositions[2];
+            car->skidPositions[car->skidIndex++] = car->wheelPositions[3];
+            if(car->skidIndex == NUM_SKIDS)
+            {
+                car->skidIndex = 0;
+            }
+        }
+    }
+
+    if(car->turboBoostCooldown > 0)
+    {
+        car->turboBoostCooldown -= steps;
     }
 }
 
@@ -351,6 +413,15 @@ void shiftDown(Car* car)
             float ratio = ((float) speedTable[car->gear + 1]) / speedTable[car->gear];
             car->revs /= ratio;
         }
+    }
+}
+
+void turboBoost(Car* car)
+{
+    if(car->turboBoostCooldown <= 0)
+    {
+        car->turboBoostTimer = 1000;
+        car->turboBoostCooldown = 2000;
     }
 }
 

@@ -72,6 +72,11 @@ int calcFrame(Uint32 steps)
         shiftDown(&playerCar);
     }
 
+    if(keyReleased(SP_BUTTON_B))
+    {
+        turboBoost(&playerCar);
+    }
+
     if(keyReleased(SP_BUTTON_A))
     {
         togglePopups(&playerCar);

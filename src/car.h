@@ -17,6 +17,8 @@
 
 #define REDLINE 7200
 
+#define NUM_SKIDS 16
+
 typedef struct {
     SDL_Surface *bodyTexture;
     SDL_Surface *bodyTextureBraking;
@@ -26,10 +28,19 @@ typedef struct {
     SDL_Surface *wheelTexture;
     spModelPointer wheelMesh;
 
+    SDL_Surface *skidTexture;
+    spModelPointer skidMesh;
+    Vector3f skidPositions[NUM_SKIDS];
+    uint8_t skidIndex;
+    uint8_t skidTimer;
+
     Vector3f position;
     Vector3f rotation;
 
     Vector3f wheelPositions[4];
+
+    int16_t turboBoostTimer;
+    int16_t turboBoostCooldown;
     
     int16_t revs;
     int8_t gear;
@@ -53,6 +64,8 @@ void accelerate(Car* car, int8_t dir, Uint32 steps);
 void steer(Car* car, int8_t dir, Uint32 steps);
 void shiftUp(Car* car);
 void shiftDown(Car* car);
+
+void turboBoost(Car* car);
 
 void togglePopups(Car* car);
 
