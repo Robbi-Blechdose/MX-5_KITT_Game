@@ -4,6 +4,7 @@ SDL_Surface *mainUITexture;
 SDL_Surface *popupsTexture;
 SDL_Surface *gearsTexture;
 SDL_Surface *numbersTexture;
+SDL_Surface *barTexture;
 
 uint8_t gearPos[6][2] = {
     {227, 227},
@@ -20,6 +21,7 @@ void initGameUI()
     popupsTexture = spLoadSurface("res/UI/Popups.png");
     gearsTexture = spLoadSurface("res/UI/Gears.png");
     numbersTexture = spLoadSurface("res/UI/Numbers.png");
+    barTexture = spLoadSurface("res/UI/TurboBoostBar.png");
 }
 
 void deleteGameUI()
@@ -28,6 +30,7 @@ void deleteGameUI()
     spDeleteSurface(popupsTexture);
     spDeleteSurface(gearsTexture);
     spDeleteSurface(numbersTexture);
+    spDeleteSurface(barTexture);
 }
 
 void drawGameUI(Car *car)
@@ -67,6 +70,14 @@ void drawGameUI(Car *car)
     spBlitSurfacePart(146, 216, 0, numbersTexture, 12 * digit1, 0, 12, 16);
     spBlitSurfacePart(159, 216, 0, numbersTexture, 12 * digit2, 0, 12, 16);
     spBlitSurfacePart(172, 216, 0, numbersTexture, 12 * digit3, 0, 12, 16);
+
+    //Turbo boost
+    int16_t turboBoostTemp = 15 - (car->turboBoostCooldown / 2000.0f) * 15;
+    int i;
+    for(i = 0; i < turboBoostTemp; i++)
+    {
+        spBlitSurface(19, 233 - (i * 2), 0, barTexture);
+    }
 }
 
 void drawFPS(spFontPointer font)
