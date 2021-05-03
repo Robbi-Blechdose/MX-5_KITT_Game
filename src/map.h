@@ -11,6 +11,8 @@ typedef struct {
     spModelPointer treeMesh;
     SDL_Surface *rockTexture;
     spModelPointer rockMesh;
+    SDL_Surface *signTexture;
+    spModelPointer signMesh;
 } Map;
 
 void initMap(Map* map);
