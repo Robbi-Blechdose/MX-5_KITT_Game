@@ -17,7 +17,7 @@
 
 #define REDLINE 7200
 
-#define NUM_SKIDS 16
+#define NUM_SKIDS 64
 
 typedef struct {
     SDL_Surface *bodyTexture;

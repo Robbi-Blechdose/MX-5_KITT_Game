@@ -39,7 +39,6 @@ void resize(Uint16 w, Uint16 h)
 void drawFrame()
 {
     spClearTarget(BACKGROUND_COLOR);
-	spSetLight(0);
 	spSetZSet(1);
 	spSetZTest(1);
 	spSetAlphaTest(0);
@@ -102,6 +101,7 @@ int main(int argc, char **argv)
 	spSetAffineTextureHack(0);
     spEmulateBlendingWithPattern(2);
     spSetCulling(1);
+	spSetLight(0);
 
     //Initialize SparrowSound
     spSoundInit();

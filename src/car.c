@@ -44,8 +44,8 @@ void initCar(Car* car)
     car->popupState = POPUPS_UP;
 
     //Load skid texture and mesh
-    car->skidTexture = spLoadSurface("res/tex/Skid.png");
-	car->skidMesh = spMeshLoadObj("res/obj/Skid.obj", car->skidTexture, 65535);
+    car->skidTexture = spLoadSurface(SKID_TEXTURE);
+	car->skidMesh = spMeshLoadObj(SKID_MESH, car->skidTexture, 65535);
     car->skidIndex = 0;
     car->skidTimer = 0;
 }
@@ -212,9 +212,9 @@ void calcRaycast(Car* car, Map* map)
     }
 
     //Apply turbo boost
-    //TODO: Apply forward direction
     if(car->turboBoostTimer)
     {
+        //TODO: Use steps variable here
         car->turboBoostTimer *= 0.96f;
         if(car->turboBoostTimer < 0)
         {
@@ -254,7 +254,8 @@ void calcCar(Car* car, Map* map, Uint32 steps)
         }
     }
 
-    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f) + (car->turboBoostTimer / 9000.0f);
+    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);
+    //TODO: Add turbo boost here
     car->speedKPH = (((float) car->revs) / speedTable[car->gear]) * 40;
 
     //Calculate x and z position
