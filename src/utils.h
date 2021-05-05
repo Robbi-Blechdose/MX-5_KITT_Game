@@ -4,6 +4,8 @@
 #include <sparrow3d.h>
 #include <SDL.h>
 
+#define EPSILON 0.0001f
+
 typedef struct {
     Sint32 x;
     Sint32 y;

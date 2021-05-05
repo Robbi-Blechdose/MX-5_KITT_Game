@@ -78,8 +78,6 @@ float dotVec3f(Vector3f* a, Vector3f* b)
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-#define EPSILON 0.0001f
-
 //Möller-Trumbore algorithm
 int intersectTriangle(Vector3f* origin, Vector3f* direction, Vector3f* vert0, Vector3f* vert1, Vector3f* vert2,
                       float* t, float* u, float* v)
