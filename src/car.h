@@ -39,6 +39,8 @@ typedef struct {
 
     Vector3f wheelPositions[4];
 
+    uint8_t onGround;
+
     int16_t turboBoostTimer;
     int16_t turboBoostCooldown;
     

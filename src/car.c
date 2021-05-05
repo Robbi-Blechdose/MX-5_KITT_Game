@@ -11,7 +11,7 @@ int8_t accelerationTable[6] = {
 #define BRAKING 140
 #define IDLE_BRAKING 10
 
-int16_t speedTable[6] = {
+float speedTable[6] = {
     -7200, 7200, 7200 / 2, 7200 / 3, 7200 / 4, 7200 / 5
 };
 
@@ -151,7 +151,7 @@ void calcWheelPositions(Car* car)
  * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
  * Then run Möller-Trumbore for each wheel
  **/
-void calcRaycast(Car* car, Map* map)
+void calcRaycast(Car* car, Map* map, Uint32 steps)
 {
     Vector3f* position = &car->position;
     spModelPointer mapMesh = map->mapMesh;
@@ -159,6 +159,8 @@ void calcRaycast(Car* car, Map* map)
     calcWheelPositions(car);
 
     uint8_t done[4] = {0, 0, 0, 0};
+
+    car->onGround = 0;
 
     int i, j;
     for(i = 0; i < mapMesh->texTriangleCount; i++)
@@ -205,6 +207,11 @@ void calcRaycast(Car* car, Map* map)
                         }
                         car->wheelPositions[k].y += diff;
                         done[k] = 1;
+
+                        if(diff > -0.001f && diff < 0.005f)
+                        {
+                            car->onGround++;
+                        }
                     }
                 }
             }
@@ -214,7 +221,7 @@ void calcRaycast(Car* car, Map* map)
     //Apply turbo boost
     if(car->turboBoostTimer)
     {
-        //TODO: Use steps variable here
+        //TODO: Use steps variable here?
         car->turboBoostTimer *= 0.96f;
         if(car->turboBoostTimer < 0)
         {
@@ -230,22 +237,16 @@ void calcRaycast(Car* car, Map* map)
     car->position.y = (car->wheelPositions[0].y + car->wheelPositions[1].y +
                        car->wheelPositions[2].y + car->wheelPositions[3].y) / 4;
     
-    car->rotation.x = -asinf(((car->wheelPositions[0].y - car->wheelPositions[3].y) +
-                              (car->wheelPositions[1].y - car->wheelPositions[2].y)) / (0.96f * 4));
+    float ldiff = car->wheelPositions[0].y - car->wheelPositions[3].y;
+    float rdiff = car->wheelPositions[1].y - car->wheelPositions[2].y;
+
+    car->rotation.x = -asinf((ldiff + rdiff) / (0.96f * 4));
     car->rotation.z = asinf(((car->wheelPositions[0].y - car->wheelPositions[1].y) +
                              (car->wheelPositions[3].y - car->wheelPositions[2].y)) / (0.57 * 4));
     
-    /**
-    printf("%f,%f,%f,%f\n",
-    car->wheelPositions[0].y, car->wheelPositions[1].y, car->wheelPositions[2].y, car->wheelPositions[3].y);**/
-}
 
-void calcCar(Car* car, Map* map, Uint32 steps)
-{
-    calcRaycast(car, map);
-
-    //Reduce speed if we're going up too tall a slope
-    if(car->rotation.x < -0.65f && car->revs > 0 && car->speed > 0)
+    //Reduce speed if we're going up too tall a slope - in a forward gear
+    if(car->revs > 0 && car->speed > 0 && (ldiff > 1 || rdiff > 1))
     {
         car->revs -= 100;
         if(car->revs < 0)
@@ -254,9 +255,18 @@ void calcCar(Car* car, Map* map, Uint32 steps)
         }
     }
 
-    car->speed = (((float) car->revs) / speedTable[car->gear]) * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);
-    //TODO: Add turbo boost here
-    car->speedKPH = (((float) car->revs) / speedTable[car->gear]) * 40;
+    /**
+    printf("%f,%f,%f,%f\n",
+    car->wheelPositions[0].y, car->wheelPositions[1].y, car->wheelPositions[2].y, car->wheelPositions[3].y);**/
+}
+
+void calcCar(Car* car, Map* map, Uint32 steps)
+{
+    calcRaycast(car, map, steps);
+
+    float speed = (car->revs / speedTable[car->gear]);
+    car->speed = speed * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);
+    car->speedKPH = speed * 40; //TODO: Add turbo boost here...
 
     //Calculate x and z position
     car->position.x += car->speed * sinf(car->rotation.y);
@@ -288,7 +298,7 @@ void calcCar(Car* car, Map* map, Uint32 steps)
         }
     }
 
-    if(car->gear == 1)
+    if(car->gear == 1 && car->onGround > 3)
     {
         car->skidTimer += steps;
         if(car->skidTimer > 100)
@@ -311,8 +321,8 @@ void calcCar(Car* car, Map* map, Uint32 steps)
 
 void accelerate(Car* car, int8_t dir, Uint32 steps)
 {
-    //Only start the car in first or reverse
-    if(car->revs == 0 && car->gear > 1)
+    //Only start the car in first or reverse, and don't accelerate while in the air
+    if((car->revs == 0 && car->gear > 1) || car->onGround < 4)
     {
         return;
     }
@@ -383,7 +393,7 @@ void shiftUp(Car* car)
         else
         {
             //Drop the revs (get ratio between gears and divide the revs by that)
-            float ratio = ((float) speedTable[car->gear - 1]) / speedTable[car->gear];
+            float ratio = speedTable[car->gear - 1] / speedTable[car->gear];
             car->revs /= ratio;
         }
     }
@@ -411,7 +421,7 @@ void shiftDown(Car* car)
         {
             //Up the revs
             //TODO: maybe damage the engine when over-revving?
-            float ratio = ((float) speedTable[car->gear + 1]) / speedTable[car->gear];
+            float ratio = speedTable[car->gear + 1] / speedTable[car->gear];
             car->revs /= ratio;
         }
     }
