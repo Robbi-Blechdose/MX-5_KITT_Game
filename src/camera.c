@@ -9,7 +9,7 @@ Vector3f cameraRot;
 Vector3f cameraInputRot;
 
 float distance = 4.2f;
-Sint32 rotYOffset = 0;
+float rotYOffset = 0;
 
 void initCamera()
 {
@@ -31,9 +31,9 @@ void calcCameraPos(Car *car, Uint32 steps)
 {
     if(keyReleased(SP_BUTTON_SELECT))
     {
-        rotYOffset = rotYOffset ? 0 : SP_PI;
+        rotYOffset = rotYOffset ? 0 : M_PI;
     }
-    cameraInputRot.y = lerpf(cameraInputRot.y, (car->steering * -0.3f) + spFixedToFloat(rotYOffset), steps * 0.02f);
+    cameraInputRot.y = lerpf(cameraInputRot.y, (car->steering * -0.3f) + rotYOffset, steps * 0.02f);
 
     //Calculate horizontal distance from car
     float hDistance = distance * cosf(cameraInputRot.x);
@@ -48,5 +48,5 @@ void calcCameraPos(Car *car, Uint32 steps)
     //Copy pitch
     cameraRot.x = cameraInputRot.x;
     //Calculate yaw
-    cameraRot.y = spFixedToFloat(SP_PI) - hAngle;
+    cameraRot.y = M_PI - hAngle;
 }

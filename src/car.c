@@ -15,7 +15,7 @@ float speedTable[6] = {
     -7200, 7200, 7200 / 2, 7200 / 3, 7200 / 4, 7200 / 5
 };
 
-void initCar(Car* car)
+void initCar(Car* car, Vector3f* pos, float Yrot)
 {
     //Load body texture and mesh
 	car->bodyTexture = spLoadSurface(MX_5_TEXTURE);
@@ -31,7 +31,7 @@ void initCar(Car* car)
     car->position.x = 0;
     car->position.y = 1.0f;
     car->position.z = -29.0f;
-    car->rotation.y = spFixedToFloat(spDiv(-SP_PI, spIntToFixed(2)));
+    car->rotation.y = -M_PI / 2;
     //Set initial wheel height
     int i;
     for(i = 0; i < 4; i++)
@@ -67,8 +67,7 @@ void drawCar(Car* car)
     for(i = 0; i < NUM_SKIDS; i++)
     {
         spPushModelView();
-        spTranslate(spFloatToFixed(car->skidPositions[i].x), spFloatToFixed(car->skidPositions[i].y - 0.9f),
-        spFloatToFixed(car->skidPositions[i].z));
+        spTranslate(spFloatToFixed(car->skidPositions[i].x), spFloatToFixed(car->skidPositions[i].y - 0.9f), spFloatToFixed(car->skidPositions[i].z));
         spMesh3D(car->skidMesh, 2);
         spPopModelView();
     }
@@ -151,10 +150,9 @@ void calcWheelPositions(Car* car)
  * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
  * Then run Möller-Trumbore for each wheel
  **/
-void calcRaycast(Car* car, Map* map, Uint32 steps)
+void calcRaycast(Car* car, spModelPointer mapMesh, Uint32 steps)
 {
     Vector3f* position = &car->position;
-    spModelPointer mapMesh = map->mapMesh;
 
     calcWheelPositions(car);
 
@@ -254,15 +252,11 @@ void calcRaycast(Car* car, Map* map, Uint32 steps)
             car->revs = 0;
         }
     }
-
-    /**
-    printf("%f,%f,%f,%f\n",
-    car->wheelPositions[0].y, car->wheelPositions[1].y, car->wheelPositions[2].y, car->wheelPositions[3].y);**/
 }
 
-void calcCar(Car* car, Map* map, Uint32 steps)
+void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
 {
-    calcRaycast(car, map, steps);
+    calcRaycast(car, mapMesh, steps);
 
     float speed = (car->revs / speedTable[car->gear]);
     car->speed = speed * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);

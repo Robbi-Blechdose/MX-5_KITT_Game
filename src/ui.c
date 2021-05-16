@@ -1,5 +1,7 @@
 #include "ui.h"
 
+SDL_Surface *menuTexture;
+
 SDL_Surface *mainUITexture;
 SDL_Surface *popupsTexture;
 SDL_Surface *gearsTexture;
@@ -15,6 +17,11 @@ uint8_t gearPos[6][2] = {
     {227, 203}
 };
 
+void initMenu()
+{
+	menuTexture = spLoadSurface("res/UI/MenuBG.png");
+}
+
 void initGameUI()
 {
 	mainUITexture = spLoadSurface("res/UI/MainUI.png");
@@ -24,6 +31,11 @@ void initGameUI()
     barTexture = spLoadSurface("res/UI/TurboBoostBar.png");
 }
 
+void deleteMenu()
+{
+    spDeleteSurface(menuTexture);
+}
+
 void deleteGameUI()
 {
     spDeleteSurface(mainUITexture);
@@ -31,6 +43,29 @@ void deleteGameUI()
     spDeleteSurface(gearsTexture);
     spDeleteSurface(numbersTexture);
     spDeleteSurface(barTexture);
+}
+
+int calcMenu()
+{
+    if(spGetInput()->button[SP_BUTTON_START])
+    {
+        return 1;
+    }
+}
+
+void drawMenu()
+{
+    spClearTarget(0);
+	spSetAlphaTest(0);
+
+    spSetHorizontalOrigin(SP_LEFT);
+    spSetVerticalOrigin(SP_TOP);
+
+    //Draw menu
+    spBlitSurface(0, 0, 5, menuTexture);
+
+	spFlip();
+	spResetZBuffer();
 }
 
 void drawGameUI(Car *car)

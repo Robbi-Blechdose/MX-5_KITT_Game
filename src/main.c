@@ -10,13 +10,14 @@
 #include "resources.h"
 #include "camera.h"
 #include "ui.h"
+#include "mission.h"
 
 #define MIN_WAIT 0 //50fps
 
 SDL_Surface *screen;
 spFontPointer font;
 
-Map map;
+Mission mission;
 Car playerCar;
 
 void resize(Uint16 w, Uint16 h)
@@ -45,7 +46,7 @@ void drawFrame()
 
     drawCameraPos();
 
-    drawMap(&map);
+    drawMap(&mission.map);
     drawCar(&playerCar);
 
     drawGameUI(&playerCar);
@@ -81,7 +82,7 @@ int calcFrame(Uint32 steps)
         togglePopups(&playerCar);
     }
 
-	calcCar(&playerCar, &map, steps);
+	calcCar(&playerCar, mission.map.mapMesh, steps);
     calcCameraPos(&playerCar, steps);
 
     updateKeys();
@@ -108,10 +109,14 @@ int main(int argc, char **argv)
     spSoundSetMusic(MUSIC);
     spSoundPlayMusic(0, -1);
 
+    //Show menu
+    initMenu();
+	spLoop(drawMenu, calcMenu, MIN_WAIT, resize, NULL);
+
     //Initialize game
+    loadMission(&mission, 0);
+    initCurrentMission(&mission, &playerCar);
     initGameUI();
-    initMap(&map);
-	initCar(&playerCar);
     initCamera();
 
     //Run main loop
@@ -119,7 +124,7 @@ int main(int argc, char **argv)
 
     //Game cleanup
     deleteCar(&playerCar);
-    deleteMap(&map);
+    deleteMap();
     deleteGameUI();
 
     //SparrowSound cleanup

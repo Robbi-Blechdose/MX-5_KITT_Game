@@ -56,11 +56,11 @@ typedef struct {
     float popupPos;
 } Car;
 
-void initCar(Car* car);
+void initCar(Car* car, Vector3f* pos, float Yrot);
 void deleteCar(Car* car);
 
 void drawCar(Car* car);
-void calcCar(Car* car, Map* map, Uint32 steps);
+void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps);
 
 void accelerate(Car* car, int8_t dir, Uint32 steps);
 void steer(Car* car, int8_t dir, Uint32 steps);
