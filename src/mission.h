@@ -7,10 +7,14 @@
 #include "map.h"
 #include "car.h"
 
+#define NUM_ENEMIES 4
+
 typedef struct {
     Map map;
     Vector3f playerStartPos;
     float playerStartYRot;
+
+    Car enemies[NUM_ENEMIES];
 } Mission;
 
 

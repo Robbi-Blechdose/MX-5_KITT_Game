@@ -70,6 +70,8 @@ void drawMenu()
 
 void drawGameUI(Car *car)
 {
+	spSetZSet(0);
+	spSetZTest(0);
     spSetAlphaTest(1);
     spSetHorizontalOrigin(SP_LEFT);
     spSetVerticalOrigin(SP_TOP);
@@ -121,6 +123,4 @@ void drawFPS(spFontPointer font)
 	sprintf(buffer, "FPS: %i", spGetFPS());
 	spSetAlphaTest(1);
 	spFontDraw(1, 1, 0, buffer, font);
-	spFlip();
-	spResetZBuffer();
 }

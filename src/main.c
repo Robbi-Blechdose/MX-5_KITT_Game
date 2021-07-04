@@ -48,9 +48,13 @@ void drawFrame()
 
     drawMap(&mission.map);
     drawCar(&playerCar);
+    //TODO: Figure out how to only draw the populated array entries...
+    drawCar(&mission.enemies[0]);
 
     drawGameUI(&playerCar);
     drawFPS(font);
+	spFlip();
+	spResetZBuffer();
 }
 
 int calcFrame(Uint32 steps)
@@ -87,6 +91,10 @@ int calcFrame(Uint32 steps)
 
     updateKeys();
 
+    //TODO: Figure out how to only calculate the populated array entries...
+    accelerate(&mission.enemies[0], 1, steps);
+    calcCar(&mission.enemies[0], mission.map.mapMesh, steps);
+
 	return 0;
 }
 
@@ -112,6 +120,7 @@ int main(int argc, char **argv)
     //Show menu
     initMenu();
 	spLoop(drawMenu, calcMenu, MIN_WAIT, resize, NULL);
+    deleteMenu();
 
     //Initialize game
     loadMission(&mission, 0);

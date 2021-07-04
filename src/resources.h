@@ -10,6 +10,10 @@
 #define MX_5_TEXTURE_BRAKING "res/tex/MX-5B.png"
 #define POPUP_MESH "res/obj/MX-5_Popups.obj"
 #define POPUP_TEXTURE "res/tex/MX-5_Popups.png"
+//                  Shelby
+#define SHELBY_MESH "res/obj/Shelby.obj"
+#define SHELBY_TEXTURE "res/tex/Shelby.png"
+//                  Miscellaneous
 #define WHEEL_MESH "res/obj/MX-5_Daisy.obj"
 #define WHEEL_TEXTURE "res/tex/MX-5_Daisy.png"
 #define SKID_TEXTURE "res/tex/Skid.png"

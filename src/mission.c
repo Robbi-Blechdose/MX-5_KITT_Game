@@ -58,5 +58,7 @@ void loadMission(Mission* mission, uint8_t index)
 void initCurrentMission(Mission* mission, Car* playerCar)
 {
     initMap(&mission->map);
-    initCar(playerCar, &mission->playerStartPos, mission->playerStartYRot);
+    initCar(playerCar, TYPE_MX_5, &mission->playerStartPos, mission->playerStartYRot);
+
+    initCar(&mission->enemies[0], TYPE_SHELBY, &mission->playerStartPos, mission->playerStartYRot);
 }

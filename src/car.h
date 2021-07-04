@@ -7,17 +7,29 @@
 #include "utils.h"
 #include "map.h"
 
-#define POPUPS_DOWN 0
-#define POPUPS_UP 1
-#define POPUPS_MDOWN 2
-#define POPUPS_MUP 3
+#define NUM_SKIDS 64
+
+typedef struct {
+    SDL_Surface *skidTexture;
+    spModelPointer skidMesh;
+    Vector3f positions[NUM_SKIDS];
+    uint8_t index;
+    uint8_t timer;
+} Skids;
+
+#define POPUPS_NONE 0
+#define POPUPS_DOWN 1
+#define POPUPS_UP 2
+#define POPUPS_MDOWN 3
+#define POPUPS_MUP 4
 #define POPUP_POS_UP 0.0f
 #define POPUP_POS_DOWN 0.75f
 #define POPUP_SPEED 0.005f
 
 #define REDLINE 7200
 
-#define NUM_SKIDS 64
+#define TYPE_MX_5   0
+#define TYPE_SHELBY 1
 
 typedef struct {
     SDL_Surface *bodyTexture;
@@ -27,12 +39,6 @@ typedef struct {
     spModelPointer popupMesh;
     SDL_Surface *wheelTexture;
     spModelPointer wheelMesh;
-
-    SDL_Surface *skidTexture;
-    spModelPointer skidMesh;
-    Vector3f skidPositions[NUM_SKIDS];
-    uint8_t skidIndex;
-    uint8_t skidTimer;
 
     Vector3f position;
     Vector3f rotation;
@@ -54,9 +60,11 @@ typedef struct {
 
     uint8_t popupState;
     float popupPos;
+
+    Skids skids;
 } Car;
 
-void initCar(Car* car, Vector3f* pos, float Yrot);
+void initCar(Car* car, uint8_t type, Vector3f* pos, float yRot);
 void deleteCar(Car* car);
 
 void drawCar(Car* car);

@@ -15,23 +15,41 @@ float speedTable[6] = {
     -7200, 7200, 7200 / 2, 7200 / 3, 7200 / 4, 7200 / 5
 };
 
-void initCar(Car* car, Vector3f* pos, float Yrot)
+void initCar(Car* car, uint8_t type, Vector3f* pos, float yRot)
 {
-    //Load body texture and mesh
-	car->bodyTexture = spLoadSurface(MX_5_TEXTURE);
-    car->bodyTextureBraking = spLoadSurface(MX_5_TEXTURE_BRAKING);
-	car->bodyMesh = spMeshLoadObj(MX_5_MESH, car->bodyTexture, 65535);
-    //Load popup texture and mesh
-	car->popupTexture = spLoadSurface(POPUP_TEXTURE);
-	car->popupMesh = spMeshLoadObj(POPUP_MESH, car->popupTexture, 65535);
+    switch(type)
+    {
+        case TYPE_MX_5:
+        {
+            //Load body texture and mesh
+            car->bodyTexture = spLoadSurface(MX_5_TEXTURE);
+            car->bodyTextureBraking = spLoadSurface(MX_5_TEXTURE_BRAKING);
+            car->bodyMesh = spMeshLoadObj(MX_5_MESH, car->bodyTexture, 65535);
+            //Load popup texture and mesh
+            car->popupTexture = spLoadSurface(POPUP_TEXTURE);
+            car->popupMesh = spMeshLoadObj(POPUP_MESH, car->popupTexture, 65535);
+            //Set popups to up
+            car->popupState = POPUPS_UP;
+            break;
+        }
+        case TYPE_SHELBY:
+        {
+            car->bodyTexture = spLoadSurface(SHELBY_TEXTURE);
+            car->bodyTextureBraking = spLoadSurface(SHELBY_TEXTURE); //TODO: Braking texture
+            car->bodyMesh = spMeshLoadObj(SHELBY_MESH, car->bodyTexture, 65535);
+            //No popups
+            car->popupState = POPUPS_NONE;
+            break;
+        }
+    }
     //Load wheel texture and mesh
     car->wheelTexture = spLoadSurface(WHEEL_TEXTURE);
 	car->wheelMesh = spMeshLoadObj(WHEEL_MESH, car->wheelTexture, 65535);
     //Set initial position + rotation
-    car->position.x = 0;
-    car->position.y = 1.0f;
-    car->position.z = -29.0f;
-    car->rotation.y = -M_PI / 2;
+    car->position.x = pos->x;
+    car->position.y = pos->y;
+    car->position.z = pos->z;
+    car->rotation.y = yRot;
     //Set initial wheel height
     int i;
     for(i = 0; i < 4; i++)
@@ -40,14 +58,12 @@ void initCar(Car* car, Vector3f* pos, float Yrot)
     }
     //Set to gear 1
     car->gear = 1;
-    //Set popups to up
-    car->popupState = POPUPS_UP;
 
     //Load skid texture and mesh
-    car->skidTexture = spLoadSurface(SKID_TEXTURE);
-	car->skidMesh = spMeshLoadObj(SKID_MESH, car->skidTexture, 65535);
-    car->skidIndex = 0;
-    car->skidTimer = 0;
+    car->skids.skidTexture = spLoadSurface(SKID_TEXTURE);
+	car->skids.skidMesh = spMeshLoadObj(SKID_MESH, car->skids.skidTexture, 65535);
+    car->skids.index = 0;
+    car->skids.timer = 0;
 }
 
 void deleteCar(Car* car)
@@ -58,17 +74,20 @@ void deleteCar(Car* car)
 	spMeshDelete(car->popupMesh);
 	spDeleteSurface(car->wheelTexture);
 	spMeshDelete(car->wheelMesh);
+
+    //TODO: Delete skids
 }
 
 void drawCar(Car* car)
 {
+    spPushModelView();
     spSetAlphaTest(1);
     int i;
     for(i = 0; i < NUM_SKIDS; i++)
     {
         spPushModelView();
-        spTranslate(spFloatToFixed(car->skidPositions[i].x), spFloatToFixed(car->skidPositions[i].y - 0.9f), spFloatToFixed(car->skidPositions[i].z));
-        spMesh3D(car->skidMesh, 2);
+        spTranslate(spFloatToFixed(car->skids.positions[i].x), spFloatToFixed(car->skids.positions[i].y - 0.9f), spFloatToFixed(car->skids.positions[i].z));
+        spMesh3D(car->skids.skidMesh, 2);
         spPopModelView();
     }
     spSetAlphaTest(0);
@@ -82,17 +101,18 @@ void drawCar(Car* car)
 	spRotateZ(spFloatToFixed(car->rotation.z));
     //Draw car
 	spMesh3D(car->bodyMesh, 2);
-    //Save model view
-    spPushModelView();
 
     //Set popup position + rotation
-    spTranslate(0, spFloatToFixed(0.03f), spFloatToFixed(1.19f));
-    spRotateX(spFloatToFixed(car->popupPos));
-    //Draw popups
-    spMesh3D(car->popupMesh, 2);
+    if(car->popupState)
+    {
+        spPushModelView();
+        spTranslate(0, spFloatToFixed(0.03f), spFloatToFixed(1.19f));
+        spRotateX(spFloatToFixed(car->popupPos));
+        //Draw popups
+        spMesh3D(car->popupMesh, 2);
+        spPopModelView();
+    }
 
-    //Get model view back
-    spPopModelView();
     //Set wheel position + rotation, then draw
     //Front left 0.57 -0.33 0.96
     spTranslate(spFloatToFixed(0.57f), spFloatToFixed(-0.33f), spFloatToFixed(0.96f));
@@ -112,6 +132,8 @@ void drawCar(Car* car)
     //Rear left 0.57 -0.33 -0.96
     spTranslate(spFloatToFixed(0.57f * 2), 0, 0);
     spMesh3D(car->wheelMesh, 2);
+
+    spPopModelView();
 }
 
 /**
@@ -260,7 +282,7 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
 
     float speed = (car->revs / speedTable[car->gear]);
     car->speed = speed * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);
-    car->speedKPH = speed * 40; //TODO: Add turbo boost here...
+    car->speedKPH = speed * 40 + (car->turboBoostTimer / 10);
 
     //Calculate x and z position
     car->position.x += car->speed * sinf(car->rotation.y);
@@ -294,15 +316,15 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
 
     if(car->gear == 1 && car->onGround > 3)
     {
-        car->skidTimer += steps;
-        if(car->skidTimer > 100)
+        car->skids.timer += steps;
+        if(car->skids.timer > 100)
         {
-            car->skidTimer = 0;
-            car->skidPositions[car->skidIndex++] = car->wheelPositions[2];
-            car->skidPositions[car->skidIndex++] = car->wheelPositions[3];
-            if(car->skidIndex == NUM_SKIDS)
+            car->skids.timer = 0;
+            car->skids.positions[car->skids.index++] = car->wheelPositions[2];
+            car->skids.positions[car->skids.index++] = car->wheelPositions[3];
+            if(car->skids.index == NUM_SKIDS)
             {
-                car->skidIndex = 0;
+                car->skids.index = 0;
             }
         }
     }
