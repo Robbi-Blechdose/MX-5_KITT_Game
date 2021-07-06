@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=MX-5 KITT
-Comment=Game
+Comment=Car game
 Exec=main-funkey.elf
 Icon=icon
 Terminal=false
-Categories=applications;
+Categories=games;

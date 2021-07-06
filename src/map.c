@@ -3,76 +3,80 @@
 #include "resources.h"
 #include "mission.h"
 
-SDL_Surface *mapTexture;
-spModelPointer mapMesh;
-SDL_Surface *treeTexture;
-spModelPointer treeMesh;
-SDL_Surface *rockTexture;
-spModelPointer rockMesh;
-SDL_Surface *signTexture;
-spModelPointer signMesh;
+GLuint mapTexture;
+GLuint mapMesh;
+GLuint treeTexture;
+GLuint treeMesh;
+GLuint rockTexture;
+GLuint rockMesh;
+GLuint signTexture;
+GLuint signMesh;
+
+model temp;
 
 void initMap(Map* map)
 {
-	mapTexture = spLoadSurface(map->terrainTexture);
-	mapMesh = spMeshLoadObj(map->terrainMesh, mapTexture, 65535);
-	treeTexture = spLoadSurface(TREE_TEXTURE);
-	treeMesh = spMeshLoadObj(TREE_MESH, treeTexture, 65535);
-	rockTexture = spLoadSurface(ROCK_TEXTURE);
-	rockMesh = spMeshLoadObj(ROCK_MESH, rockTexture, 65535);
-	signTexture = spLoadSurface(SIGN_TEXTURE);
-	signMesh = spMeshLoadObj(SIGN_MESH, signTexture, 65535);
+	mapTexture = loadRGBTexture(map->terrainTexture);
+	//mapMesh = loadModelList(map->terrainMesh);
+	temp = loadModel(map->terrainMesh);
+	map->mapMesh = &temp;
+	mapMesh = createModelDisplayList(&temp);
 
-	map->mapMesh = mapMesh;
+	treeTexture = loadRGBTexture(TREE_TEXTURE);
+	treeMesh = loadModelList(TREE_MESH);
+	rockTexture = loadRGBTexture(ROCK_TEXTURE);
+	rockMesh = loadModelList(ROCK_MESH);
+	signTexture = loadRGBTexture(SIGN_TEXTURE);
+	signMesh = loadModelList(SIGN_MESH);
 }
 
 void deleteMap()
 {
-	spDeleteSurface(mapTexture);
-	spMeshDelete(mapMesh);
-	spDeleteSurface(treeTexture);
+	/**
+	SDL_FreeSurface(treeTexture);
 	spMeshDelete(treeMesh);
-	spDeleteSurface(rockTexture);
+	SDL_FreeSurface(rockTexture);
 	spMeshDelete(rockMesh);
-	spDeleteSurface(signTexture);
+	SDL_FreeSurface(signTexture);
 	spMeshDelete(signMesh);
+	**/
 }
 
 void drawMap(Map* map)
 {
-	spMesh3D(mapMesh, 2);
-
-	spPushModelView();
 	int i;
+
+	glBindTexture(GL_TEXTURE_2D, mapTexture);
+	glCallList(mapMesh);
+
+	glPushMatrix();
+	glBindTexture(GL_TEXTURE_2D, rockTexture);
 	for(i = 0; i < map->numRocks; i++)
 	{
-		spTranslate(map->rocks[i].x, map->rocks[i].y, map->rocks[i].z);
-		spMesh3D(rockMesh, 1);
+		glTranslatef(map->rocks[i].x, map->rocks[i].y, map->rocks[i].z);
+		glCallList(rockMesh);
 	}
+	glPopMatrix();
 
-	spPopModelView();
-	spPushModelView();
-
-	spSetAlphaTest(1);
-	spSetCulling(0);
-
+	glPushMatrix();
+    glDisable(GL_CULL_FACE);
+	glBindTexture(GL_TEXTURE_2D, treeTexture);
 	for(i = 0; i < map->numTrees; i++)
 	{
-		spTranslate(map->trees[i].x, map->trees[i].y, map->trees[i].z);
-		spMesh3D(treeMesh, 1);
+		glTranslatef(map->trees[i].x, map->trees[i].y, map->trees[i].z);
+		glCallList(treeMesh);
 	}
+	glPopMatrix();
 
-	spPopModelView();
-
+	glBindTexture(GL_TEXTURE_2D, signTexture);
 	for(i = 0; i < map->numSigns; i++)
 	{
-		spPushModelView();
-		spTranslate(map->signs[i].x, map->signs[i].y, map->signs[i].z);
-		spRotateY(map->signRot[i]);
-		spMesh3D(signMesh, 1);
-		spPopModelView();
+		glPushMatrix();
+		glTranslatef(map->signs[i].x, map->signs[i].y, map->signs[i].z);
+		glRotatef(RAD_TO_DEG(map->signRot[i]), 0, 1, 0);
+		glCallList(signMesh);
+		glPopMatrix();
 	}
 	
-	spSetAlphaTest(0);
-	spSetCulling(1);
+    glEnable(GL_CULL_FACE);
 }

@@ -22,29 +22,31 @@ void initCar(Car* car, uint8_t type, Vector3f* pos, float yRot)
         case TYPE_MX_5:
         {
             //Load body texture and mesh
-            car->bodyTexture = spLoadSurface(MX_5_TEXTURE);
-            car->bodyTextureBraking = spLoadSurface(MX_5_TEXTURE_BRAKING);
-            car->bodyMesh = spMeshLoadObj(MX_5_MESH, car->bodyTexture, 65535);
+            car->bodyTexture = loadRGBTexture(MX_5_TEXTURE);
+            car->bodyTextureBraking = loadRGBTexture(MX_5_TEXTURE_BRAKING);
+            car->bodyMesh = loadModelList(MX_5_MESH);
             //Load popup texture and mesh
-            car->popupTexture = spLoadSurface(POPUP_TEXTURE);
-            car->popupMesh = spMeshLoadObj(POPUP_MESH, car->popupTexture, 65535);
+            car->popupTexture = loadRGBTexture(POPUP_TEXTURE);
+            car->popupMesh = loadModelList(POPUP_MESH);
             //Set popups to up
             car->popupState = POPUPS_UP;
             break;
         }
         case TYPE_SHELBY:
         {
-            car->bodyTexture = spLoadSurface(SHELBY_TEXTURE);
-            car->bodyTextureBraking = spLoadSurface(SHELBY_TEXTURE); //TODO: Braking texture
-            car->bodyMesh = spMeshLoadObj(SHELBY_MESH, car->bodyTexture, 65535);
+            //Load body texture and mesh
+            car->bodyTexture = loadRGBTexture(SHELBY_TEXTURE);
+            car->bodyTextureBraking = loadRGBTexture(SHELBY_TEXTURE); //TODO: Braking texture
+            car->bodyMesh = loadModelList(SHELBY_MESH);
             //No popups
             car->popupState = POPUPS_NONE;
             break;
         }
     }
+
     //Load wheel texture and mesh
-    car->wheelTexture = spLoadSurface(WHEEL_TEXTURE);
-	car->wheelMesh = spMeshLoadObj(WHEEL_MESH, car->wheelTexture, 65535);
+    car->wheelTexture = loadRGBTexture(WHEEL_TEXTURE);
+    car->wheelMesh = loadModelList(WHEEL_MESH);
     //Set initial position + rotation
     car->position.x = pos->x;
     car->position.y = pos->y;
@@ -58,82 +60,98 @@ void initCar(Car* car, uint8_t type, Vector3f* pos, float yRot)
     }
     //Set to gear 1
     car->gear = 1;
+    //Not braking
+    car->braking = 0;
 
+    /**
     //Load skid texture and mesh
-    car->skids.skidTexture = spLoadSurface(SKID_TEXTURE);
+    car->skids.skidTexture = loadPNG(SKID_TEXTURE);
 	car->skids.skidMesh = spMeshLoadObj(SKID_MESH, car->skids.skidTexture, 65535);
     car->skids.index = 0;
     car->skids.timer = 0;
+    **/
 }
 
 void deleteCar(Car* car)
 {
-	spDeleteSurface(car->bodyTexture);
+    /**
+	SDL_FreeSurface(car->bodyTexture);
 	spMeshDelete(car->bodyMesh);
-	spDeleteSurface(car->popupTexture);
+	SDL_FreeSurface(car->popupTexture);
 	spMeshDelete(car->popupMesh);
-	spDeleteSurface(car->wheelTexture);
+	SDL_FreeSurface(car->wheelTexture);
 	spMeshDelete(car->wheelMesh);
+    **/
 
     //TODO: Delete skids
 }
 
 void drawCar(Car* car)
 {
-    spPushModelView();
-    spSetAlphaTest(1);
+    glPushMatrix();
+    /**
+    glEnable(GL_ALPHA_TEST);
     int i;
     for(i = 0; i < NUM_SKIDS; i++)
     {
-        spPushModelView();
-        spTranslate(spFloatToFixed(car->skids.positions[i].x), spFloatToFixed(car->skids.positions[i].y - 0.9f), spFloatToFixed(car->skids.positions[i].z));
+        glPushMatrix();
+        glTranslatef(car->skids.positions[i].x, car->skids.positions[i].y - 0.9f, car->skids.positions[i].z);
         spMesh3D(car->skids.skidMesh, 2);
-        spPopModelView();
+        glPopMatrix();
     }
-    spSetAlphaTest(0);
+    glDisable(GL_ALPHA_TEST);
+    **/
 
     //Set car position + rotation
-	spTranslate(spFloatToFixed(car->position.x),
-                spFloatToFixed(car->position.y),
-                spFloatToFixed(car->position.z));
-	spRotateY(spFloatToFixed(car->rotation.y));
-	spRotateX(spFloatToFixed(car->rotation.x));
-	spRotateZ(spFloatToFixed(car->rotation.z));
+	glTranslatef(car->position.x, car->position.y, car->position.z);
+    glRotatef(RAD_TO_DEG(car->rotation.y), 0, 1, 0);
+    glRotatef(RAD_TO_DEG(car->rotation.x), 1, 0, 0);
+    glRotatef(RAD_TO_DEG(car->rotation.z), 0, 0, 1);
     //Draw car
-	spMesh3D(car->bodyMesh, 2);
+    if(car->braking)
+    {
+	    glBindTexture(GL_TEXTURE_2D, car->bodyTextureBraking);
+    }
+    else
+    {
+        glBindTexture(GL_TEXTURE_2D, car->bodyTexture);
+    }
+	glCallList(car->bodyMesh);
 
     //Set popup position + rotation
     if(car->popupState)
     {
-        spPushModelView();
-        spTranslate(0, spFloatToFixed(0.03f), spFloatToFixed(1.19f));
-        spRotateX(spFloatToFixed(car->popupPos));
+        glPushMatrix();
+        glTranslatef(0, 0.03f, 1.19f);
+        glRotatef(RAD_TO_DEG(car->popupPos), 1, 0, 0);
         //Draw popups
-        spMesh3D(car->popupMesh, 2);
-        spPopModelView();
+	    glBindTexture(GL_TEXTURE_2D, car->popupTexture);
+        glCallList(car->popupMesh);
+        glPopMatrix();
     }
 
+    glBindTexture(GL_TEXTURE_2D, car->wheelTexture);
     //Set wheel position + rotation, then draw
     //Front left 0.57 -0.33 0.96
-    spTranslate(spFloatToFixed(0.57f), spFloatToFixed(-0.33f), spFloatToFixed(0.96f));
-    spRotateY(spIntToFixed(car->steering * 45));
-    spMesh3D(car->wheelMesh, 2);
+    glTranslatef(0.57f, -0.33f, 0.96f);
+    glRotatef(car->steering * 45, 0, 1, 0);
+    glCallList(car->wheelMesh);
     //Revert angle
-    spRotateY(spIntToFixed(car->steering * -45));
+    glRotatef(car->steering * -45, 0, 1, 0);
     //Front right -0.57 -0.33 0.96
-    spTranslate(spFloatToFixed(-0.57f * 2), 0, 0);
-    spRotateY(spIntToFixed(car->steering * 45));
-    spMesh3D(car->wheelMesh, 2);
+    glTranslatef(-0.57f * 2, 0, 0);
+    glRotatef(car->steering * 45, 0, 1, 0);
+    glCallList(car->wheelMesh);
     //Revert angle
-    spRotateY(spIntToFixed(car->steering * -45));
+    glRotatef(car->steering * -45, 0, 1, 0);
     //Rear right -0.57 -0.33 -0.96
-    spTranslate(0, 0, spFloatToFixed(-0.96f * 2));
-    spMesh3D(car->wheelMesh, 2);
+    glTranslatef(0, 0, -0.96f * 2);
+    glCallList(car->wheelMesh);
     //Rear left 0.57 -0.33 -0.96
-    spTranslate(spFloatToFixed(0.57f * 2), 0, 0);
-    spMesh3D(car->wheelMesh, 2);
+    glTranslatef(0.57f * 2, 0, 0);
+    glCallList(car->wheelMesh);
 
-    spPopModelView();
+    glPopMatrix();
 }
 
 /**
@@ -150,8 +168,8 @@ void calcWheelPositions(Car* car)
         car->wheelPositions[i].z = car->position.z;
     }
 
-    float sinY = sin(car->rotation.y);
-    float cosY = cos(car->rotation.y);
+    float sinY = sinf(car->rotation.y);
+    float cosY = cosf(car->rotation.y);
     //Front left 0.57 -0.33 0.96
     car->wheelPositions[0].x += 0.57f * cosY + 0.96f * sinY;
     car->wheelPositions[0].z += 0.57f * -sinY + 0.96f * cosY;
@@ -172,7 +190,7 @@ void calcWheelPositions(Car* car)
  * Check which triangles have at least one vertex in the radius of "car position + 3.0f"
  * Then run Möller-Trumbore for each wheel
  **/
-void calcRaycast(Car* car, spModelPointer mapMesh, Uint32 steps)
+void calcRaycast(Car* car, model* mapMesh, uint16_t ticks)
 {
     Vector3f* position = &car->position;
 
@@ -183,31 +201,21 @@ void calcRaycast(Car* car, spModelPointer mapMesh, Uint32 steps)
     car->onGround = 0;
 
     int i, j;
-    for(i = 0; i < mapMesh->texTriangleCount; i++)
+    for(i = 0; i < mapMesh->npoints; i += 3)
 	{
         for(j = 0; j < 3; j++)
         {
-            if(spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].x) > (position->x - DISTANCE) &&
-               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].x) < (position->x + DISTANCE) &&
-               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) > (position->z - DISTANCE) &&
-               spFixedToFloat(mapMesh->texPoint[mapMesh->texTriangle[i].point[j]].z) < (position->z + DISTANCE))
+            if(mapMesh->d[i + j].d[0] > (position->x - DISTANCE) && mapMesh->d[i + j].d[0] < (position->x + DISTANCE) &&
+                mapMesh->d[i + j].d[2] > (position->z - DISTANCE) && mapMesh->d[i + j].d[2] < (position->z + DISTANCE))
             {
                 Vector3f dir, vert0, vert1, vert2;
                 float t, u, v;
                 dir.x = 0;
                 dir.y = -1.0f;
                 dir.z = 0;
-                //TODO: Precompute this on game start? We got more than enough RAM
-                //      Note: Won't be necessary if we rewrite sparrow3d to use floats...
-                fixedToVec3f(&vert0, mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].x,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].y,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[0]].z);
-                fixedToVec3f(&vert1, mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].x,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].y,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[1]].z);
-                fixedToVec3f(&vert2, mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].x,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].y,
-                                     mapMesh->texPoint[mapMesh->texTriangle[i].point[2]].z);
+                vert0 = (Vector3f) {.x = mapMesh->d[i].d[0], .y = mapMesh->d[i].d[1], .z = mapMesh->d[i].d[2]};
+                vert1 = (Vector3f) {.x = mapMesh->d[i + 1].d[0], .y = mapMesh->d[i + 1].d[1], .z = mapMesh->d[i + 1].d[2]};
+                vert2 = (Vector3f) {.x = mapMesh->d[i + 2].d[0], .y = mapMesh->d[i + 2].d[1], .z = mapMesh->d[i + 2].d[2]};
                 
                 int k;
                 for(k = 0; k < 4; k++)
@@ -276,12 +284,12 @@ void calcRaycast(Car* car, spModelPointer mapMesh, Uint32 steps)
     }
 }
 
-void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
+void calcCar(Car* car, model* mapMesh, uint16_t ticks)
 {
-    calcRaycast(car, mapMesh, steps);
+    calcRaycast(car, mapMesh, ticks);
 
     float speed = (car->revs / speedTable[car->gear]);
-    car->speed = speed * (steps / 750.0f) + (car->turboBoostTimer / 8000.0f);
+    car->speed = speed * (ticks / 750.0f) + (car->turboBoostTimer / 8000.0f);
     car->speedKPH = speed * 40 + (car->turboBoostTimer / 10);
 
     //Calculate x and z position
@@ -293,7 +301,7 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
     {
         if(car->popupPos < POPUP_POS_DOWN)
         {
-            car->popupPos += POPUP_SPEED * steps;
+            car->popupPos += POPUP_SPEED * ticks;
         }
         else
         {
@@ -305,7 +313,7 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
     {
         if(car->popupPos > POPUP_POS_UP)
         {
-            car->popupPos -= POPUP_SPEED * steps;
+            car->popupPos -= POPUP_SPEED * ticks;
         }
         else
         {
@@ -316,7 +324,7 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
 
     if(car->gear == 1 && car->onGround > 3)
     {
-        car->skids.timer += steps;
+        car->skids.timer += ticks;
         if(car->skids.timer > 100)
         {
             car->skids.timer = 0;
@@ -331,14 +339,14 @@ void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps)
 
     if(car->turboBoostCooldown > 0)
     {
-        car->turboBoostCooldown -= steps;
+        car->turboBoostCooldown -= ticks;
     }
 }
 
-void accelerate(Car* car, int8_t dir, Uint32 steps)
+void accelerate(Car* car, int8_t dir, uint16_t ticks)
 {
     //Only start the car in first or reverse, and don't accelerate while in the air
-    if((car->revs == 0 && car->gear > 1) || car->onGround < 4)
+    if((car->revs == 0 && car->gear > 1)) // || car->onGround < 4)
     {
         return;
     }
@@ -346,18 +354,18 @@ void accelerate(Car* car, int8_t dir, Uint32 steps)
     //Accelerate, brake or idle brake
     if(dir > 0)
     {
-        car->revs += (accelerationTable[car->gear] * steps) / 20;
-        car->bodyMesh->texture = car->bodyTexture;
+        car->revs += (accelerationTable[car->gear] * ticks) / 20;
+        car->braking = 0;
     }
     else if(dir < 0)
     {
-        car->revs -= (BRAKING * steps) / 20;
-        car->bodyMesh->texture = car->bodyTextureBraking;
+        car->revs -= (BRAKING * ticks) / 20;
+        car->braking = 1;
     }
     else
     {
-        car->revs -= (IDLE_BRAKING * steps) / 20;
-        car->bodyMesh->texture = car->bodyTexture;
+        car->revs -= (IDLE_BRAKING * ticks) / 20;
+        car->braking = 0;
     }
 
     if(car->revs < 0)
@@ -370,19 +378,19 @@ void accelerate(Car* car, int8_t dir, Uint32 steps)
     }
 }
 
-void steer(Car* car, int8_t dir, Uint32 steps)
+void steer(Car* car, int8_t dir, uint16_t ticks)
 {
     if(car->speedKPH != 0)
     {
         //Forward gear
         if(car->gear > 0)
         {
-            car->rotation.y += dir * (steps / 1000.0f);
+            car->rotation.y += dir * (ticks / 1000.0f);
         }
         //Reverse
         else
         {
-            car->rotation.y -= dir * (steps / 1000.0f);
+            car->rotation.y -= dir * (ticks / 1000.0f);
         }
         //car->rotation.z = lerpf(car->rotation.z, dir * 0.07f, steps * 0.01f);
     }

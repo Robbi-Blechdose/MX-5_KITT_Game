@@ -1,4 +1,5 @@
-#include <sparrow3d.h>
+#define CHAD_API_IMPL
+#include "zbuffer.h"
 #include <SDL_image.h>
 #include <math.h>
 #include <string.h>
@@ -12,37 +13,23 @@
 #include "ui.h"
 #include "mission.h"
 
-#define MIN_WAIT 0 //50fps
+#define WINX 240
+#define WINY 240
 
-SDL_Surface *screen;
-spFontPointer font;
+SDL_Surface* screen;
+ZBuffer* frameBuffer = NULL;
+SDL_Event event;
+uint16_t fps;
+
+uint8_t running = 1;
 
 Mission mission;
 Car playerCar;
 
-void resize(Uint16 w, Uint16 h)
-{
-	spSelectRenderTarget(spGetWindowSurface());
-	//Setup of the new/resized window
-	//spSetPerspective( 75.0, ( float )spGetWindowSurface()->w / ( float )spGetWindowSurface()->h, 1.0f, 100.0f );
-    spSetPerspective(75, screen->w / screen->h, 1.5f, 80.0f);
-
-	//Font Loading
-	if(font)
-		spFontDelete(font);
-	font = spFontLoad("./font/Play-Bold.ttf", spFixedToInt(10 * spGetSizeFactor()));
-	spFontSetShadeColor(0);
-	spFontAdd(font, SP_FONT_GROUP_ASCII, 65535); //whole ASCII
-	spFontAdd(font, "äüöÄÜÖßẞ", 65535); //German stuff (same like spFontAdd( font, SP_FONT_GROUP_GERMAN, 0 ); )
-	spFontAddBorder(font, 0);
-}
-
 void drawFrame()
 {
-    spClearTarget(BACKGROUND_COLOR);
-	spSetZSet(1);
-	spSetZTest(1);
-	spSetAlphaTest(0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_CULL_FACE);
 
     drawCameraPos();
 
@@ -51,76 +38,105 @@ void drawFrame()
     //TODO: Figure out how to only draw the populated array entries...
     drawCar(&mission.enemies[0]);
 
-    drawGameUI(&playerCar);
-    drawFPS(font);
-	spFlip();
-	spResetZBuffer();
+    drawFPS(fps);
+
+    if(SDL_MUSTLOCK(screen))
+    {
+        SDL_LockSurface(screen);
+    }
+    ZB_copyFrameBuffer(frameBuffer, screen->pixels, screen->pitch);
+	if(SDL_MUSTLOCK(screen))
+    {
+		SDL_UnlockSurface(screen);
+    }
+    drawGameUI(screen, &playerCar);
+	SDL_Flip(screen);
 }
 
-int calcFrame(Uint32 steps)
+void handleInput(uint16_t ticks)
 {
-    if(spGetInput()->button[SP_BUTTON_QUIT])
+    if(event.type == SDL_KEYUP)
     {
-        return 1;
+        switch(event.key.keysym.sym)
+        {
+            case SDLK_a:
+            {
+                togglePopups(&playerCar);
+                break;
+            }
+            case SDLK_b:
+            {
+                turboBoost(&playerCar);
+                break;
+            }
+            case SDLK_n:
+            {
+                shiftUp(&playerCar);
+                break;
+            }
+            case SDLK_m:
+            {
+                shiftDown(&playerCar);
+                break;
+            }
+            case SDLK_k:
+            {
+                toggleCameraDirection();
+                break;
+            }
+            case SDLK_q:
+            {
+                running = 0;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
-
-    accelerate(&playerCar, -spGetInput()->axis[1], steps);
-    steer(&playerCar, -spGetInput()->axis[0], steps);
-
-    if(keyReleased(SP_BUTTON_R))
+    else if(event.type == SDL_QUIT)
     {
-        shiftUp(&playerCar);
+        running = 0;
     }
-    else if(keyReleased(SP_BUTTON_L))
-    {
-        shiftDown(&playerCar);
-    }
-
-    if(keyReleased(SP_BUTTON_B))
-    {
-        turboBoost(&playerCar);
-    }
-
-    if(keyReleased(SP_BUTTON_A))
-    {
-        togglePopups(&playerCar);
-    }
-
-	calcCar(&playerCar, mission.map.mapMesh, steps);
-    calcCameraPos(&playerCar, steps);
-
-    updateKeys();
-
-    //TODO: Figure out how to only calculate the populated array entries...
-    accelerate(&mission.enemies[0], 1, steps);
-    calcCar(&mission.enemies[0], mission.map.mapMesh, steps);
-
-	return 0;
 }
 
 int main(int argc, char **argv)
 {
-    //Initialize Sparrow3d
-	spSetDefaultWindowSize(240, 240);
-	spInitCore();
-	screen = spCreateDefaultWindow();
-	resize(screen->w, screen->h);
-	spSelectRenderTarget(screen);
-	spUsePrecalculatedNormals(1);
-	spSetAffineTextureHack(0);
-    spEmulateBlendingWithPattern(2);
-    spSetCulling(1);
-	spSetLight(0);
+    SDL_Init(SDL_INIT_VIDEO);
+    screen = SDL_SetVideoMode(WINX, WINY, 16, SDL_SWSURFACE);
+	SDL_ShowCursor(SDL_DISABLE);
+
+    IMG_Init(IMG_INIT_PNG);
+
+    //Initialize TinyGL
+	frameBuffer = ZB_open(WINX, WINY, ZB_MODE_5R6G5B, 0);
+	glInit(frameBuffer);
+	glShadeModel(GL_FLAT);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glClearColor(0.4f, 0.8f, 1.0f, 0);
+	glClearDepth(1.0f);
+    glViewport(0, 0, WINX, WINY);
+	glTextSize(GL_TEXT_SIZE8x8);
+	glEnable(GL_TEXTURE_2D);
+
+    glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	mat4 matrix = perspective(70, (float)WINX / (float)WINY, 1, 512);
+	glLoadMatrixf(matrix.d);
 
     //Initialize SparrowSound
-    spSoundInit();
-    spSoundSetMusic(MUSIC);
-    spSoundPlayMusic(0, -1);
+    //spSoundInit();
+    //spSoundSetMusic(MUSIC);
+    //spSoundPlayMusic(0, -1);
 
     //Show menu
-    initMenu();
-	spLoop(drawMenu, calcMenu, MIN_WAIT, resize, NULL);
-    deleteMenu();
+    //initMenu();
+	//spLoop(drawMenu, calcMenu, MIN_WAIT, resize, NULL);
+    //deleteMenu();
 
     //Initialize game
     loadMission(&mission, 0);
@@ -129,7 +145,63 @@ int main(int argc, char **argv)
     initCamera();
 
     //Run main loop
-	spLoop(drawFrame, calcFrame, MIN_WAIT, resize, NULL);
+	uint32_t tNow = SDL_GetTicks();
+	uint32_t tLastFrame = tNow;
+    uint16_t ticks = 0;
+    while(running)
+    {
+		tNow = SDL_GetTicks();
+        ticks = tNow - tLastFrame;
+        
+        while(SDL_PollEvent(&event))
+        {
+            handleKeys(&event);
+            handleInput(ticks);
+        }
+
+        if(keyPressed(U))
+        {
+            accelerate(&playerCar, 1, ticks);
+        }
+        else if(keyPressed(D))
+        {
+            accelerate(&playerCar, -1, ticks);
+        }
+        else
+        {
+            accelerate(&playerCar, 0, ticks);
+        }
+        if(keyPressed(L))
+        {
+            steer(&playerCar, 1, ticks);
+        }
+        else if(keyPressed(R))
+        {
+            steer(&playerCar, -1, ticks);
+        }
+        else
+        {
+            steer(&playerCar, 0, ticks);
+        }
+
+        calcCar(&playerCar, mission.map.mapMesh, ticks);
+        calcCameraPos(&playerCar, ticks);
+
+        //TODO: Figure out how to only calculate the populated array entries...
+        accelerate(&mission.enemies[0], 1, ticks);
+        calcCar(&mission.enemies[0], mission.map.mapMesh, ticks);
+
+        drawFrame();
+
+        /**
+        uint16_t targetFPS = 50;
+		if((1000 / targetFPS) > (SDL_GetTicks() - tNow))
+        {
+			SDL_Delay((1000 / targetFPS) - (SDL_GetTicks() - tNow)); // Yay stable framerate!
+		}**/
+		fps = 1000.0f / (float)(tNow - tLastFrame);
+		tLastFrame = tNow;
+    }
 
     //Game cleanup
     deleteCar(&playerCar);
@@ -137,10 +209,12 @@ int main(int argc, char **argv)
     deleteGameUI();
 
     //SparrowSound cleanup
-    spSoundStopMusic(0);
-    spSoundQuit();
-    //Sparrow3d cleanup
-	spFontDelete(font);
-	spQuitCore();
+    //spSoundStopMusic(0);
+    //spSoundQuit();
+    
+    //TinyGL cleanup
+	ZB_close(frameBuffer);
+	glClose();
+
 	return 0;
 }

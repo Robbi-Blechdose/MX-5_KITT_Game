@@ -1,7 +1,6 @@
 #ifndef _MISSION_H
 #define _MISSION_H
 
-#include <sparrow3d.h>
 #include <SDL.h>
 #include "utils.h"
 #include "map.h"

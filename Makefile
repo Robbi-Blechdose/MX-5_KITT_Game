@@ -1,16 +1,15 @@
 CC          	= gcc
 
-CFLAGS			= -Wall -fno-common -std=gnu99
-LDFLAGS     	= -lc -lgcc -lm -lSDL -lSDL_image -lSDL_mixer -lSDL_ttf -lm -lstdc++ -lz
+CFLAGS			= -O3
+LDFLAGS     	= -lSDL -lSDL_image -lm
 
 PNAME			= main.elf
 
-SPARROW_LIBS	= /home/julius/Dokumente/sparrow3d/build/amd64/sparrow3d/libsparrow3d.a /home/julius/Dokumente/sparrow3d/build/amd64/sparrow3d/libsparrowSound.a
+TINGYGL_LIB		= /home/julius/Dokumente/tinygl/lib/libTinyGL.a
 
-DYNAMIC			= -lSDL_mixer -lSDL_ttf -lSDL_image -lSDL -lm -lmikmod
-SDL_INCLUDE		= -I/opt/funkey-sdk/arm-funkey-linux-musleabihf/sysroot/usr/include/SDL  -D_GNU_SOURCE=1 -D_REENTRANT
-SPARROW_INCLUDE	= -I/home/julius/Dokumente/sparrow3d
-INCLUDES		= -I/opt/funkey-sdk/include $(SDL_INCLUDE) $(SPARROW_INCLUDE)
+SDL_INCLUDE		= -I/opt/funkey-sdk/arm-funkey-linux-musleabihf/sysroot/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+TINYGL_INCLUDE	= -I/home/julius/Dokumente/tinygl/include
+INCLUDES		= -I/opt/funkey-sdk/include $(SDL_INCLUDE) $(TINYGL_INCLUDE)
 
 ifdef TARGET
 include $(TARGET).mk
@@ -24,7 +23,7 @@ OBJS		= $(notdir $(patsubst %.c, %.o, $(SRC_C)))
 
 # Rules to make executable
 $(PNAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $(PNAME) $^ $(LDFLAGS) $(SPARROW_LIBS) $(DYNAMIC)
+	$(CC) $(CFLAGS) -o $(PNAME) $^ $(LDFLAGS) $(TINGYGL_LIB)
 
 $(OBJS): %.o : %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<

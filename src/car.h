@@ -1,7 +1,6 @@
 #ifndef _CAR_H
 #define _CAR_H
 
-#include <sparrow3d.h>
 #include <SDL_image.h>
 
 #include "utils.h"
@@ -11,7 +10,7 @@
 
 typedef struct {
     SDL_Surface *skidTexture;
-    spModelPointer skidMesh;
+    //spModelPointer skidMesh;
     Vector3f positions[NUM_SKIDS];
     uint8_t index;
     uint8_t timer;
@@ -32,13 +31,15 @@ typedef struct {
 #define TYPE_SHELBY 1
 
 typedef struct {
-    SDL_Surface *bodyTexture;
-    SDL_Surface *bodyTextureBraking;
-    spModelPointer bodyMesh;
-    SDL_Surface *popupTexture;
-    spModelPointer popupMesh;
-    SDL_Surface *wheelTexture;
-    spModelPointer wheelMesh;
+    GLuint bodyTexture;
+    GLuint bodyTextureBraking;
+    GLuint bodyMesh;
+
+    GLuint popupTexture;
+    GLuint popupMesh;
+    
+    GLuint wheelTexture;
+    GLuint wheelMesh;
 
     Vector3f position;
     Vector3f rotation;
@@ -61,6 +62,8 @@ typedef struct {
     uint8_t popupState;
     float popupPos;
 
+    uint8_t braking;
+
     Skids skids;
 } Car;
 
@@ -68,10 +71,10 @@ void initCar(Car* car, uint8_t type, Vector3f* pos, float yRot);
 void deleteCar(Car* car);
 
 void drawCar(Car* car);
-void calcCar(Car* car, spModelPointer mapMesh, Uint32 steps);
+void calcCar(Car* car, model* mapMesh, uint16_t ticks);
 
-void accelerate(Car* car, int8_t dir, Uint32 steps);
-void steer(Car* car, int8_t dir, Uint32 steps);
+void accelerate(Car* car, int8_t dir, uint16_t ticks);
+void steer(Car* car, int8_t dir, uint16_t ticks);
 void shiftUp(Car* car);
 void shiftDown(Car* car);
 

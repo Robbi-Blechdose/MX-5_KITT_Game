@@ -1,55 +1,16 @@
+#include <SDL_image.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "includes/stb_image.h"
 #include "utils.h"
-
-char button[20];
-
-void updateKeys()
-{
-    int i;
-    for(i = 0; i < 20; i++)
-    {
-        button[i] = spGetInput()->button[i];
-    }
-}
-
-//char keyDown(uint8_t code);
-
-char keyReleased(uint8_t code)
-{
-    if(!spGetInput()->button[code] && button[code])
-    {
-        return 1;
-    }
-    return 0;
-}
-
 
 float lerpf(float a, float b, float f)
 {
     return a + f * (b - a);
 }
 
-Sint32 lerpFixed(Sint32 a, Sint32 b, Sint32 f)
-{
-    return a + spMul(f, b - a);
-}
-
 int8_t lerpInt(int8_t a, int8_t b, int8_t f)
 {
     return a + f * (b - a);
-}
-
-void fixedVec3toVec3f(Vector3f* result, Vector* a)
-{
-    result->x = spFixedToFloat(a->x);
-    result->y = spFixedToFloat(a->y);
-    result->z = spFixedToFloat(a->z);
-}
-
-void fixedToVec3f(Vector3f* result, Sint32 x, Sint32 y, Sint32 z)
-{
-    result->x = spFixedToFloat(x);
-    result->y = spFixedToFloat(y);
-    result->z = spFixedToFloat(z);
 }
 
 void addVec3f(Vector3f* result, Vector3f* a, Vector3f* b)
@@ -76,6 +37,140 @@ void crossVec3f(Vector3f* result, Vector3f* a, Vector3f* b)
 float dotVec3f(Vector3f* a, Vector3f* b)
 {
     return a->x * b->x + a->y * b->y + a->z * b->z;
+}
+
+SDL_Surface* loadPNG(const char* path)
+{
+    SDL_Surface* loaded = IMG_Load(path);
+    if(loaded != NULL)
+    {
+        SDL_Surface* converted = SDL_DisplayFormatAlpha(loaded);
+        SDL_FreeSurface(loaded);
+        if(converted != NULL)
+        {
+            return converted;
+        }
+    }
+    printf("PNG loading failed for \"%s\".\n", path);
+    return NULL;
+}
+
+model loadModel(const char* path)
+{
+    objraw omodel;
+	model m = initmodel();
+	omodel = tobj_load(path);
+
+	if(!omodel.positions)
+    {
+		printf("No positions in model \"%s\".\n", path);
+    }
+	m = tobj_tomodel(&omodel);
+    freeobjraw(&omodel);
+	//printf("Has %ld points.\n", m.npoints);
+    return m;
+}
+
+GLuint createModelDisplayList(model* model)
+{
+	GLuint ret = 0;
+	if(!model->d)
+    {
+		return 0;
+    }
+	ret = glGenLists(1);
+	glNewList(ret, GL_COMPILE);
+	glBegin(GL_TRIANGLES);
+	for(uint i = 0; i < model->npoints; i++)
+    {
+        //Colors
+		if(model->c)
+        {
+			glColor3f(model->c[i].d[0], model->c[i].d[1], model->c[i].d[2]);
+		}
+        //Texcoords
+		if(model->t)
+        {
+			glTexCoord2f(model->t[i].d[0], model->t[i].d[1]);
+        }
+        //Normals
+		if(model->n)
+        {
+			glNormal3f(model->n[i].d[0], model->n[i].d[1], model->n[i].d[2]);
+        }
+		glVertex3f(model->d[i].d[0], model->d[i].d[1], model->d[i].d[2]);
+	}
+	glEnd();
+	glEndList();
+	return ret;
+}
+
+GLuint loadModelList(const char* path)
+{
+	model temp = loadModel(path);
+	GLuint ret = createModelDisplayList(&temp);
+	freemodel(&temp);
+    return ret;
+}
+
+GLuint loadRGBTexture(unsigned char* path)
+{
+    int sw = 0, sh = 0, sc = 0; // sc goes unused.
+    unsigned char* sourceData = stbi_load(path, &sw, &sh, &sc, 3);
+	GLuint t = 0;
+	glGenTextures(1, &t);
+	glBindTexture(GL_TEXTURE_2D, t);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, sw, sh, 0, GL_RGB, GL_UNSIGNED_BYTE, sourceData);
+	free(sourceData);
+	return t;
+}
+
+uint8_t keys[13];
+
+void handleKeys(SDL_Event* event)
+{
+    if(event->type != SDL_KEYDOWN && event->type != SDL_KEYUP)
+    {
+        return;
+    }
+
+    uint8_t state = 0;
+    if(event->type == SDL_KEYDOWN)
+    {
+        state = 1;
+    }
+    switch(event->key.keysym.sym)
+    {
+        case SDLK_u:
+        {
+            keys[U] = state;
+            break;
+        }
+        case SDLK_d:
+        {
+            keys[D] = state;
+            break;
+        }
+        case SDLK_l:
+        {
+            keys[L] = state;
+            break;
+        }
+        case SDLK_r:
+        {
+            keys[R] = state;
+            break;
+        }
+    }
+}
+
+uint8_t keyPressed(Key key)
+{
+    return keys[key];
 }
 
 //Möller-Trumbore algorithm

@@ -18,22 +18,17 @@ void initCamera()
 
 void drawCameraPos()
 {
-	spIdentity();
-    spRotateX(spFloatToFixed(cameraRot.x));
-    spRotateY(spFloatToFixed(cameraRot.y));
-    spRotateZ(spFloatToFixed(cameraRot.z));
-    spTranslate(spFloatToFixed(-cameraPos.x),
-                spFloatToFixed(-cameraPos.y),
-                spFloatToFixed(-cameraPos.z));
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+    glRotatef(RAD_TO_DEG(cameraRot.x), 1, 0, 0);
+    glRotatef(RAD_TO_DEG(cameraRot.y), 0, 1, 0);
+    glRotatef(RAD_TO_DEG(cameraRot.z), 0, 0, 1);
+    glTranslatef(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 }
 
-void calcCameraPos(Car *car, Uint32 steps)
+void calcCameraPos(Car *car, uint16_t ticks)
 {
-    if(keyReleased(SP_BUTTON_SELECT))
-    {
-        rotYOffset = rotYOffset ? 0 : M_PI;
-    }
-    cameraInputRot.y = lerpf(cameraInputRot.y, (car->steering * -0.3f) + rotYOffset, steps * 0.02f);
+    cameraInputRot.y = lerpf(cameraInputRot.y, (car->steering * -0.3f) + rotYOffset, ticks * 0.02f);
 
     //Calculate horizontal distance from car
     float hDistance = distance * cosf(cameraInputRot.x);
@@ -49,4 +44,9 @@ void calcCameraPos(Car *car, Uint32 steps)
     cameraRot.x = cameraInputRot.x;
     //Calculate yaw
     cameraRot.y = M_PI - hAngle;
+}
+
+void toggleCameraDirection()
+{
+    rotYOffset = rotYOffset ? 0 : M_PI;
 }

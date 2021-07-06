@@ -1,7 +1,6 @@
 #ifndef _UI_H
 #define _UI_H
 
-#include <sparrow3d.h>
 #include <SDL.h>
 
 #include "car.h"
@@ -14,8 +13,8 @@ void deleteGameUI();
 
 int calcMenu();
 void drawMenu();
-void drawGameUI(Car *car);
+void drawGameUI(SDL_Surface* screen, Car *car);
 
-void drawFPS(spFontPointer font);
+void drawFPS(uint16_t fps);
 
 #endif
